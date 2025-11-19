@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loop AI Hospital Network Assistant</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Pulse ring animation for recording state */
+        @keyframes pulse-ring {
+            0% {
+                transform: scale(0.95);
+                opacity: 0.8;
+            }
+            50% {
+                transform: scale(1.15);
+                opacity: 0.4;
+            }
+            100% {
+                transform: scale(0.95);
+                opacity: 0.8;
+            }
+        }
+        
+        /* Glow animation for active mic */
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 20px rgba(59, 130, 246, 0.5), 0 0 40px rgba(59, 130, 246, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 30px rgba(59, 130, 246, 0.7), 0 0 60px rgba(59, 130, 246, 0.5);
+            }
+        }
+        
+        /* Waveform animation */
+        @keyframes bob {
+            0%, 100% { height: 8px; }
+            50% { height: 32px; }
+        }
+        
+        .waveform {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            height: 40px;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.3s, visibility 0.3s;
+        }
+        
+        .waveform.listening {
+            visibility: visible;
+            opacity: 1;
+        }
+        
+        .waveform .bar {
+            width: 4px;
+            height: 8px;
+            background: linear-gradient(180deg, #3B82F6, #6366F1);
+            border-radius: 4px;
+            animation: bob 1s ease-in-out infinite;
+        }
+        
+        .waveform .bar.b1 { animation-delay: 0s; }
+        .waveform .bar.b2 { animation-delay: 0.1s; }
+        .waveform .bar.b3 { animation-delay: 0.2s; }
+        .waveform .bar.b4 { animation-delay: 0.3s; }
+        .waveform .bar.b5 { animation-delay: 0.4s; }
+        
+        /* Status badges */
+        .status-badges {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 0;
+            margin: 0;
+        }
+        
+        .status-badges .badge {
+            display: none;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #EFF6FF, #DBEAFE);
+            border: 1px solid #BFDBFE;
+            border-radius: 24px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #1E40AF;
+            opacity: 0;
+            transition: opacity 0.2s ease-in-out;
+        }
+        
+        .status-badges .badge.show {
+            display: inline-block;
+            opacity: 1;
+        }
+        
+        /* Mic button active state */
+        .mic-button.active {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3), 0 0 30px rgba(59, 130, 246, 0.5);
+            animation: glow 1.5s ease-in-out infinite;
+        }
+        
+        .recording-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        
+        .mic-glow {
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        /* Typing animation */
+        .typing {
+            font-size: 1.125rem;
+            font-weight: 500;
+            color: #4B5563;
+            text-align: center;
+            min-height: 1.75rem;
+            position: relative;
+            display: inline-block;
+        }
+        
+        .typing::after {
+            content: '|';
+            animation: blink 0.8s step-end infinite;
+            margin-left: 2px;
+        }
+        
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+        
+        .typing.complete::after {
+            animation: none;
+            content: '';
+        }
+        
+        .mic-button {
+            transition: all 0.3s ease;
+        }
+        
+        .mic-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .mic-button:active {
+            transform: scale(0.95);
+        }
+        
+        /* Toast notification styles */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        
+        /* Chat bubble styles */
+        .user-bubble {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .agent-bubble {
+            background: #f3f4f6;
+            color: #1f2937;
+        }
+        
+        /* Hospital name styling */
+        .hospital-name {
+            color: #126144;
+            font-weight: 600;
+        }
+        
+        /* Agent response styling */
+        .agent-bubble strong {
+            color: #126144;
+            font-weight: 600;
+        }
+        
+        /* Chip hover effect */
+        .example-chip {
+            transition: all 0.2s ease;
+        }
+        
+        .example-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        /* Hero pattern overlay */
+        .hero-pattern {
+            background-image: 
+                repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,.03) 10px, rgba(255,255,255,.03) 20px);
+        }
+        
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .toast {
+                right: 10px;
+                left: 10px;
+                width: auto;
+            }
+            
+            .mic-button {
+                padding: 2rem !important;
+            }
+            
+            .waveform {
+                gap: 4px;
+                height: 32px;
+            }
+            
+            .waveform .bar {
+                width: 3px;
+            }
+            
+            .status-badges .badge {
+                font-size: 0.75rem;
+                padding: 6px 16px;
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+    
+    <!-- Profile Icon -->
+    <div class="absolute top-4 right-4 z-50">
+        <button class="bg-white rounded-full p-3 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+            <svg class="w-7 h-7 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+            </svg>
+        </button>
+    </div>
+
+    <!-- Hero Banner -->
+    <div class="w-full">
+        <div class="relative h-48 overflow-hidden">
+            <img src="Loop_ai.png" alt="Loop AI Banner" class="w-full h-full object-cover" style="transform: scale(1.0); object-position: center 50%;">
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="w-full px-4 py-8">
+        <!-- Microphone Card -->
+        <div class="bg-white rounded-3xl shadow-xl mb-8 mx-auto" style="max-width: 1400px; padding: 1.5rem 2rem 1rem 2rem;">
+            <div class="flex flex-col items-center" style="gap: 4px;">
+                <!-- Mic Button Container -->
+                <div class="relative mb-2">
+                    <!-- Pulse ring for recording state -->
+                    <div id="pulseRing" class="absolute inset-0 bg-blue-500 rounded-full opacity-0"></div>
+                    
+                    <!-- Microphone button -->
+                    <button 
+                        id="micButton" 
+                        class="mic-button relative bg-gradient-to-br from-[#126144] to-[#0d4a33] hover:from-[#0d4a33] hover:to-[#0a3a28] text-white rounded-full p-10 md:p-14 shadow-2xl focus:outline-none focus:ring-4 focus:ring-green-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onclick="toggleRecording()"
+                        aria-label="Start conversation"
+                    >
+                        <!-- Microphone Icon -->
+                        <svg id="micIcon" class="w-16 h-16 md:w-20 md:h-20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+                        </svg>
+                        
+                        <!-- Loading Spinner -->
+                        <svg id="spinner" class="hidden w-16 h-16 md:w-20 md:h-20 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Typing Animation Text -->
+                <div class="flex items-center justify-center">
+                    <p id="typingText" class="typing"></p>
+                </div>
+
+                <!-- Waveform Animation -->
+                <div id="waveform" class="waveform">
+                    <div class="bar b1"></div>
+                    <div class="bar b2"></div>
+                    <div class="bar b3"></div>
+                    <div class="bar b4"></div>
+                    <div class="bar b5"></div>
+                </div>
+
+                <!-- Status Badges -->
+                <div id="statusBadges" class="status-badges">
+                    <span class="badge" id="statusListening"> Listening…</span>
+                    <span class="badge" id="statusProcessing"> Processing…</span>
+                    <span class="badge" id="statusSearching"> Searching database…</span>
+                </div>
+
+                <!-- Chat Log -->
+                <div id="chatLog" class="w-full space-y-4 max-h-96 overflow-y-auto" style="display: none;"></div>
+
+                <!-- Error Display -->
+                <div id="errorBox" class="w-full bg-red-50 border border-red-200 rounded-xl p-4 hidden">
+                    <p class="text-sm text-red-600 mb-1 font-semibold">Error:</p>
+                    <p id="errorText" class="text-red-800 text-sm"></p>
+                </div>
+                
+                <!-- Example Prompts -->
+                <div class="w-full mt-6 pt-6 border-t border-gray-200">
+                    <h3 class="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">Example Queries</h3>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li class="flex items-start">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0" style="background-color: #126144;"></span>
+                            <span>Tell me 3 hospitals around Bangalore</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0" style="background-color: #126144;"></span>
+                            <span>Can you confirm if Manipal Sarjapur in Bangalore is in my network?</span>
+                        </li>
+                        <li class="flex items-start">
+                            <span class="inline-block w-1.5 h-1.5 rounded-full mt-2 mr-3 flex-shrink-0" style="background-color: #126144;"></span>
+                            <span>Show me hospitals near Mumbai with cardiology services</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-gray-600">
+            <p class="text-xs mt-2 opacity-75">© 2025 Loop Health - Intern Assignment Project</p>
+        </div>
+    </div>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+        let isRecording = false;
+        let currentAudio = null;
+        let audioContext;
+        let mediaStream;
+        
+        // Generate a unique session ID for this page session
+        let sessionId = 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        const micButton = document.getElementById('micButton');
+        const micIcon = document.getElementById('micIcon');
+        const spinner = document.getElementById('spinner');
+        const pulseRing = document.getElementById('pulseRing');
+        const waveform = document.getElementById('waveform');
+        const chatLog = document.getElementById('chatLog');
+        const errorBox = document.getElementById('errorBox');
+        const errorText = document.getElementById('errorText');
+        const toastContainer = document.getElementById('toastContainer');
+        const typingTextElement = document.getElementById('typingText');
+        const statusListening = document.getElementById('statusListening');
+        const statusProcessing = document.getElementById('statusProcessing');
+        const statusSearching = document.getElementById('statusSearching');
+
+        // Badge helper functions
+        function showBadge(badgeElement) {
+            // Hide all badges first
+            document.querySelectorAll('.badge').forEach(b => b.classList.remove('show'));
+            // Show the selected badge
+            if (badgeElement) {
+                badgeElement.classList.add('show');
+            }
+        }
+
+        function hideBadges() {
+            document.querySelectorAll('.badge').forEach(b => b.classList.remove('show'));
+        }
+
+        function toggleListening(isListening) {
+            if (isListening) {
+                waveform.classList.add('listening');
+                micButton.classList.add('active');
+                showBadge(statusListening);
+            } else {
+                waveform.classList.remove('listening');
+                micButton.classList.remove('active');
+                hideBadges();
+            }
+        }
+
+        function simulateProcessingAndSearch() {
+            // Show Processing badge
+            showBadge(statusProcessing);
+            
+            setTimeout(() => {
+                // Show Searching badge after 900ms
+                showBadge(statusSearching);
+                
+                setTimeout(() => {
+                    // Hide all badges after another 1200ms
+                    hideBadges();
+                }, 1200);
+            }, 900);
+        }
+
+        // Typing animation function
+        function typeText(element, text, speed = 45) {
+            let index = 0;
+            element.textContent = '';
+            
+            function addChar() {
+                if (index < text.length) {
+                    element.textContent += text.charAt(index);
+                    index++;
+                    setTimeout(addChar, speed);
+                } else {
+                    // Remove blinking cursor when done
+                    element.classList.add('complete');
+                }
+            }
+            
+            addChar();
+        }
+
+        // Toast notification function
+        function showToast(message, icon = '💬') {
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `
+                <div class="flex items-center space-x-3">
+                    <span class="text-2xl">${icon}</span>
+                    <span class="text-gray-800 font-medium">${message}</span>
+                </div>
+            `;
+            toastContainer.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // Check microphone permissions
+        async function checkMicrophonePermission() {
+            try {
+                const result = await navigator.permissions.query({ name: 'microphone' });
+                if (result.state === 'denied') {
+                    showError('Microphone access denied. Please allow microphone access in your browser settings.');
+                    return false;
+                }
+                return true;
+            } catch (error) {
+                // Permissions API not supported, try to access directly
+                return true;
+            }
+        }
+
+        // Show user query in chat
+        function showUserQuery(text) {
+            chatLog.style.display = 'block';
+            const bubble = document.createElement('div');
+            bubble.className = 'flex justify-end mb-3';
+            bubble.innerHTML = `
+                <div class="user-bubble rounded-2xl rounded-tr-sm px-4 py-3 max-w-md shadow-md">
+                    <p class="text-sm font-medium">${text}</p>
+                </div>
+            `;
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        // Show agent response in chat
+        function showAgentResponse(text) {
+            chatLog.style.display = 'block';
+            const bubble = document.createElement('div');
+            bubble.className = 'flex justify-start mb-3';
+            
+            // Split by lines and format professionally
+            const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+            let formattedHtml = '';
+            
+            lines.forEach((line, index) => {
+                // First line is intro (if it doesn't start with bullet)
+                if (index === 0 && !line.startsWith('•') && !line.startsWith('*')) {
+                    formattedHtml += `<p class="mb-3 font-medium text-gray-700">${line}</p>`;
+                }
+                // Bullet points - format: * Hospital Name, located at Address
+                else if (line.startsWith('*') || line.startsWith('•')) {
+                    // Remove the asterisk
+                    let cleanLine = line.replace(/^\*\s*/, '').replace(/^•\s*/, '');
+                    
+                    // Extract hospital name (before first comma)
+                    const commaIndex = cleanLine.indexOf(',');
+                    if (commaIndex > 0) {
+                        const hospitalName = cleanLine.substring(0, commaIndex).trim();
+                        const rest = cleanLine.substring(commaIndex + 1).trim();
+                        formattedHtml += `<p class="mb-2 text-gray-800 leading-relaxed">• <strong class="hospital-name">${hospitalName}</strong>, ${rest}</p>`;
+                    } else {
+                        formattedHtml += `<p class="mb-2 text-gray-800 leading-relaxed">• ${cleanLine}</p>`;
+                    }
+                }
+                // Regular text
+                else {
+                    formattedHtml += `<p class="mb-2 text-gray-800">${line}</p>`;
+                }
+            });
+            
+            bubble.innerHTML = `
+                <div class="agent-bubble rounded-2xl rounded-tl-sm px-6 py-4 max-w-3xl shadow-sm border border-gray-200 bg-white">
+                    <div class="text-sm">${formattedHtml}</div>
+                </div>
+            `;
+            chatLog.appendChild(bubble);
+            chatLog.scrollTop = chatLog.scrollHeight;
+        }
+
+        // Send example prompt
+        async function sendExamplePrompt(text) {
+            showUserQuery(text);
+            
+            // Simulate text-based query (no voice recording needed)
+            try {
+                const response = await fetch('/process_text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || 'Server error');
+                }
+                
+                const data = await response.json();
+                showAgentResponse(data.response);
+                
+                // Play audio response
+                if (data.audio) {
+                    await playAudioFromHex(data.audio);
+                }
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message);
+            }
+        }
+
+        // Start conversation (voice recording)
+        async function startConversation() {
+            // If audio is playing, stop it (interrupt)
+            if (currentAudio && !currentAudio.paused) {
+                console.log('Interrupting current audio playback...');
+                currentAudio.pause();
+                currentAudio = null;
+                spinner.classList.add('hidden');
+                micIcon.classList.remove('hidden');
+                hideAllStatusBadges();
+            }
+            
+            const hasPermission = await checkMicrophonePermission();
+            if (!hasPermission) return;
+            
+            try {
+                // Hide previous messages
+                errorBox.classList.add('hidden');
+
+                // Request microphone access
+                mediaStream = await navigator.mediaDevices.getUserMedia({ 
+                    audio: {
+                        channelCount: 1,
+                        sampleRate: 16000
+                    } 
+                });
+                
+                // Create MediaRecorder
+                const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+                    ? 'audio/webm;codecs=opus' 
+                    : 'audio/webm';
+                
+                mediaRecorder = new MediaRecorder(mediaStream, { mimeType });
+                audioChunks = [];
+                
+                console.log('Recording started with MIME type:', mimeType);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        audioChunks.push(event.data);
+                        console.log('Audio chunk received:', event.data.size, 'bytes');
+                    }
+                };
+
+                mediaRecorder.onstop = async () => {
+                    console.log('Recording stopped, total chunks:', audioChunks.length);
+                    mediaStream.getTracks().forEach(track => track.stop());
+                    await processAudio();
+                };
+
+                // Record in chunks every second
+                mediaRecorder.start(1000);
+                isRecording = true;
+
+                // Update UI
+                pulseRing.classList.remove('opacity-0');
+                pulseRing.classList.add('recording-pulse', 'opacity-30');
+                micButton.classList.add('ring-4', 'ring-red-400');
+                
+                // Show waveform and listening badge
+                toggleListening(true);
+
+            } catch (error) {
+                console.error('Error accessing microphone:', error);
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    showError('Please allow microphone access to use voice features.');
+                } else {
+                    showError('Could not access microphone. Please check your device settings.');
+                }
+            }
+        }
+
+        // Stop conversation (stop recording)
+        function stopConversation() {
+            if (mediaRecorder && isRecording) {
+                mediaRecorder.stop();
+                isRecording = false;
+
+                // Update UI
+                pulseRing.classList.add('opacity-0');
+                pulseRing.classList.remove('recording-pulse', 'opacity-30');
+                micButton.classList.remove('ring-4', 'ring-red-400');
+                
+                // Hide waveform and show processing sequence
+                toggleListening(false);
+                simulateProcessingAndSearch();
+                
+                // Show spinner
+                micIcon.classList.add('hidden');
+                spinner.classList.remove('hidden');
+            }
+        }
+
+        // Toggle recording
+        function toggleRecording() {
+            // If audio is currently playing, interrupt it
+            if (currentAudio && !currentAudio.paused) {
+                console.log('🛑 Interrupting AI response...');
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                currentAudio = null;
+                
+                // Reset UI
+                spinner.classList.add('hidden');
+                micIcon.classList.remove('hidden');
+                hideAllStatusBadges();
+                
+                // Start new recording
+                startConversation();
+                return;
+            }
+            
+            // If processing (spinner visible), interrupt
+            if (!spinner.classList.contains('hidden')) {
+                console.log('🛑 Interrupting processing...');
+                // Reset UI and allow new recording
+                spinner.classList.add('hidden');
+                micIcon.classList.remove('hidden');
+                hideAllStatusBadges();
+                startConversation();
+                return;
+            }
+            
+            // Normal toggle behavior
+            if (isRecording) {
+                stopConversation();
+            } else {
+                startConversation();
+            }
+        }
+
+        // Process recorded audio
+        async function processAudio() {
+            try {
+                // Create audio blob
+                const mimeType = audioChunks[0]?.type || 'audio/webm;codecs=opus';
+                const audioBlob = new Blob(audioChunks, { type: mimeType });
+                
+                console.log('Audio blob created:');
+                console.log('  - Size:', audioBlob.size, 'bytes');
+                console.log('  - Type:', audioBlob.type);
+                console.log('  - Chunks:', audioChunks.length);
+                
+                if (audioBlob.size < 1000) {
+                    throw new Error('Recording too short or failed. Please try again and speak for at least 2-3 seconds.');
+                }
+                
+                // Create FormData
+                const formData = new FormData();
+                formData.append('audio', audioBlob, 'recording.webm');
+                formData.append('session_id', sessionId);
+
+                // Send to backend
+                console.log('Sending audio to server...');
+                const response = await fetch('/process_voice', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                console.log('Response status:', response.status);
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Server error');
+                }
+
+                // Display in chat
+                showUserQuery(data.transcript);
+                showAgentResponse(data.response);
+
+                // Play audio response
+                if (data.audio) {
+                    await playAudioFromHex(data.audio);
+                }
+
+                // Check if session ended (out-of-scope)
+                if (data.session_ended) {
+                    console.log('Session ended - out of scope query');
+                    micButton.disabled = true;
+                    micButton.style.opacity = '0.5';
+                    micButton.style.cursor = 'not-allowed';
+                    showError('Conversation ended. Please refresh the page to start a new conversation.');
+                }
+
+            } catch (error) {
+                console.error('Error processing audio:', error);
+                showError(error.message);
+            } finally {
+                // Reset UI
+                micIcon.classList.remove('hidden');
+                spinner.classList.add('hidden');
+            }
+        }
+
+        // Play audio from hex string
+        async function playAudioFromHex(hexString) {
+            return new Promise((resolve, reject) => {
+                try {
+                    // Convert hex to bytes
+                    const bytes = new Uint8Array(hexString.match(/.{1,2}/g).map(byte => parseInt(byte, 16)));
+                    
+                    // Create blob and URL
+                    const audioBlob = new Blob([bytes], { type: 'audio/mpeg' });
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    
+                    // Stop any currently playing audio
+                    if (currentAudio) {
+                        currentAudio.pause();
+                        currentAudio = null;
+                    }
+                    
+                    // Play audio
+                    currentAudio = new Audio(audioUrl);
+                    currentAudio.onended = () => {
+                        URL.revokeObjectURL(audioUrl);
+                        resolve();
+                    };
+                    currentAudio.onerror = reject;
+                    currentAudio.play();
+                    
+                } catch (error) {
+                    reject(error);
+                }
+            });
+        }
+
+        // Show error message
+        function showError(message) {
+            errorText.textContent = message;
+            errorBox.classList.remove('hidden');
+        }
+
+        // Check for browser support
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            showError('Your browser does not support audio recording. Please use Chrome, Firefox, or Edge.');
+        }
+
+        // Initial greeting and typing animation
+        window.addEventListener('load', () => {
+            console.log('Page loaded, starting typing animation...');
+            const typingElement = document.getElementById('typingText');
+            console.log('Typing element:', typingElement);
+            
+            // Start typing animation
+            setTimeout(() => {
+                if (typingElement) {
+                    typeText(typingElement, "Hi! I'm Loop AI. How can I assist you today? Click the mic whenever you're ready.", 25);
+                } else {
+                    console.error('Typing text element not found!');
+                }
+            }, 300);
+        });
+    </script>
+</body>
+</html>
