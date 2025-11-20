@@ -1,8 +1,8 @@
-# Loop AI Hospital Network Assistant 🏥
+# Loop AI Hospital Network Assistant 
 
 A conversational AI voice agent that helps users find hospitals in a network using **Google Gemini 2.0 Flash**, **RAG (Retrieval-Augmented Generation)**, and **Function Calling**.
 
-## 🎯 Features
+##  Features
 
 - **Voice-to-Voice Interaction**: Speak naturally and get audio responses with typing animation
 - **Intelligent Hospital Search**: Find hospitals by city using semantic search (FAISS vector database)
@@ -14,7 +14,7 @@ A conversational AI voice agent that helps users find hospitals in a network usi
 - **Interrupt Capability**: Click mic anytime to stop playback and ask new question
 - **Twilio Integration**: Phone call support with voice webhooks (bonus feature)
 
-## 🏗️ Architecture
+##  Architecture
 
 ### How It Handles Large Data
 
