@@ -1,6 +1,6 @@
 # Loop AI Hospital Network Assistant 🏥
 
-A conversational AI voice agent that helps users find hospitals in a network using **Google Gemini 2.0 Flash**, **RAG (Retrieval-Augmented Generation)**, and **Function Calling**. Built for Loop Health Internship Assignment.
+A conversational AI voice agent that helps users find hospitals in a network using **Google Gemini 2.0 Flash**, **RAG (Retrieval-Augmented Generation)**, and **Function Calling**.
 
 ## 🎯 Features
 
@@ -16,7 +16,7 @@ A conversational AI voice agent that helps users find hospitals in a network usi
 
 ## 🏗️ Architecture
 
-### How It Handles Large Data (Assignment Requirement)
+### How It Handles Large Data
 
 Instead of sending all 2,182 hospitals to Gemini (which would use ~150K tokens), we use a **dual-retrieval strategy**:
 
@@ -95,7 +95,7 @@ python app.py
 http://localhost:5000
 ```
 
-## 🎤 Usage
+##  Usage
 
 1. Click the microphone button (it will turn green)
 2. Speak your query clearly for 2-3 seconds
@@ -153,10 +153,10 @@ loop_project/
 ├── List of GIPSA Hospitals - Sheet1.csv  # 2,179 hospitals
 ├── hospital_index.faiss           # Generated FAISS vector index
 ├── hospital_data.pkl              # Generated hospital DataFrame
-└── Loop_ai.png                    # Logo image
+└── Loop_ai.png                    # banner image
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### Gemini Model
 Change model in `app.py`:
@@ -179,7 +179,7 @@ Change in `hospital_rag.py` and `app.py`:
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 ```
 
-## 🧪 Testing
+## Testing
 
 ### Manual Testing
 1. Run `python app.py`
@@ -201,13 +201,6 @@ Expected response:
 }
 ```
 
-## 🎥 Demo Video Requirements
-
-Record a Loom video showing:
-1. Opening the web interface
-2. Asking: "Tell me 3 hospitals around Bangalore"
-3. Asking: "Can you confirm if Manipal Sarjapur in Bangalore is in my network?"
-4. Showing the audio responses playing
 
 ## 🚀 Deployment (Optional)
 
@@ -222,7 +215,7 @@ ngrok http 5000
 3. Add `GEMINI_API_KEY` environment variable
 4. Deploy!
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### "ModuleNotFoundError"
 ```bash
@@ -263,12 +256,8 @@ AudioSegment.ffprobe = r"C:\path\to\ffprobe.exe"
 - Verify free tier quota (1500 requests/day)
 - Check rate limits (15 RPM for Flash model)
 
-### "Manipal Sarjapur not found"
-- Fixed! Search now checks both name AND address
-- Handles Bangalore/Bengaluru city variations
-- Debug logs show search progress in terminal
 
-## 📊 Performance
+## Performance
 
 - **RAG search latency**: <50ms (FAISS in-memory search)
 - **Function call lookup**: <10ms (DataFrame search)
@@ -279,13 +268,11 @@ AudioSegment.ffprobe = r"C:\path\to\ffprobe.exe"
 
 ## 🔐 Security Notes
 
-- Never commit `.env` file with real API keys
-- Use environment variables in production
 - Implement rate limiting for public deployments
 - Session data stored in-memory (clears on server restart)
 - Temporary audio files deleted after processing
 
-## 📚 API Endpoints
+##  API Endpoints
 
 ### `POST /process_voice`
 **Input**: 
@@ -320,13 +307,13 @@ AudioSegment.ffprobe = r"C:\path\to\ffprobe.exe"
 }
 ```
 
-## 🎓 Assignment Completion Checklist
+## Assignment Completion Checklist
 
 - [x] **Part 1: API Integration & Data Loading**
   - [x] Voice-to-voice API integration (Gemini 2.0 Flash + edge-tts)
   - [x] Efficient data handling (RAG with FAISS + Function Calling)
-  - [x] Query 1: "3 hospitals around Bangalore" ✅
-  - [x] Query 2: "Manipal Sarjapur in network" ✅
+  - [x] Query 1: "3 hospitals around Bangalore" (works)
+  - [x] Query 2: "Manipal Sarjapur in network" (works)
   - [x] Handles 2,179 hospitals without context overflow
 
 - [x] **Part 2: Introduction & Follow-ups**
@@ -339,17 +326,17 @@ AudioSegment.ffprobe = r"C:\path\to\ffprobe.exe"
   - [x] Out-of-scope detection (weather, news, jokes, etc.)
   - [x] Polite handoff: "I am forwarding this to a human agent"
   - [x] Conversation ends after out-of-scope query
-  - [x] **Twilio phone integration** (bonus - configured but requires VoIP testing)
+  - [x] **Twilio phone integration** (configured but requires VoIP testing)
 
-## 🏆 Key Technical Achievements
+##  Key Technical Achievements
 
-1. ✅ **Smart Search**: Searches both hospital name AND address for better accuracy
-2. ✅ **City Variations**: Handles Bangalore/Bengaluru, Mumbai/Bombay, etc.
-3. ✅ **Retry Logic**: Automatic 3-attempt retry for speech recognition failures
-4. ✅ **Audio Pipeline**: WebM → WAV conversion with FFmpeg integration
-5. ✅ **Interrupt Support**: Users can stop AI mid-response and ask new questions
-6. ✅ **Session Management**: Unique session IDs prevent conversation mixing
-7. ✅ **Professional UI**: Loop AI branding, typing animation, waveform visualization
+1. **Smart Search**: Searches both hospital name AND address for better accuracy
+2. **City Variations**: Handles Bangalore/Bengaluru, Mumbai/Bombay, etc.
+3. **Retry Logic**: Automatic 3-attempt retry for speech recognition failures
+4. **Audio Pipeline**: WebM → WAV conversion with FFmpeg integration
+5. **Interrupt Support**: Users can stop AI mid-response and ask new questions
+6. **Session Management**: Unique session IDs prevent conversation mixing
+7. **Professional UI**: Loop AI branding, typing animation, waveform visualization
 
 ## 📝 License
 
@@ -368,5 +355,3 @@ Created for Loop Health Internship Assignment - November 2025
 - Check the troubleshooting section
 - Review terminal logs for debug information
 - All function calls and search operations are logged
-
-**Good luck with your demo! 🎉**
